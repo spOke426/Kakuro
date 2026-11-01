@@ -26,3 +26,11 @@
 .board-scroll-tip{margin:10px 25px 0;text-align:center;color:#71697e;font-size:11px;line-height:1.6}
 .board-area.large-board:has(.pause-overlay:not([hidden])) .board{visibility:hidden}
 @media(max-width:680px){.difficulty-options{grid-template-columns:repeat(2,minmax(0,1fr))}.difficulty-copy small{font-size:10px}.difficulty-symbol.insane{height:24px}}
+
+.sound-button[aria-pressed=true]{color:var(--purple)}
+.sound-button[aria-pressed=true] .sound-slash,.sound-button[aria-pressed=false] .sound-waves{display:none}
+.confetti-layer{position:fixed;inset:0;z-index:10;overflow:hidden;pointer-events:none;user-select:none}
+.confetti-piece{position:absolute;top:-16px;display:block;width:7px;height:12px;border-radius:2px;opacity:0;animation:confetti-fall var(--fall-time) var(--delay) linear both}
+.confetti-piece.round{width:8px;height:8px;border-radius:50%}
+@keyframes confetti-fall{0%{opacity:1;transform:translate3d(0,-4vh,0) rotate(0deg)}80%{opacity:1}100%{opacity:0;transform:translate3d(var(--drift),110vh,0) rotate(var(--spin))}}
+@media(prefers-reduced-motion:reduce){.confetti-layer{display:none}.confetti-piece{animation:none}}

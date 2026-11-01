@@ -6,7 +6,7 @@ const base = 'https://example.github.io/Kakuro/';
 const bank = JSON.parse(fs.readFileSync(new URL('../data/puzzles.json',import.meta.url)));
 const html = fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
 const scripts = [...html.matchAll(/<script\b[^>]*src="([^"]+)"/g)].map(match => fs.readFileSync(new URL(`../public/${match[1]}`,import.meta.url),'utf8'));
-assert.equal(scripts.length,3);
+assert.equal(scripts.length,4);
 let dom, runtimeErrors = [], networkRequests = 0;
 async function open(saved = {}, options = {}) {
   dom = new JSDOM(html,{url:options.url || base,runScripts:'outside-only',pretendToBeVisual:true});
@@ -14,7 +14,7 @@ async function open(saved = {}, options = {}) {
   w.structuredClone = structuredClone;
   w.addEventListener('error', event => runtimeErrors.push(event.message));
   w.HTMLDialogElement.prototype.showModal = function(){this.setAttribute('open','');};
-  w.HTMLDialogElement.prototype.close = function(){this.removeAttribute('open');};
+  w.HTMLDialogElement.prototype.close = function(){this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
   for(const [key,value] of Object.entries(saved))w.localStorage.setItem(key,value);
   if(options.blockStorage)w.Storage.prototype.setItem = () => {throw new Error('Storage unavailable');};
   w.fetch = () => {networkRequests++;throw new Error('The static game must not make API requests.');};

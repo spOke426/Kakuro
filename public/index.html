@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="assets/style.css">
     <script src="assets/puzzles.js" defer></script>
     <script src="assets/engine.js" defer></script>
+    <script src="assets/feedback.js" defer></script>
     <script src="assets/game.js" defer></script>
 </head>
 <body>
@@ -27,7 +28,7 @@
         <section class="game-card" aria-label="Kakuro puzzle">
             <div class="game-toolbar">
                 <div class="puzzle-label"><span class="level-badge" id="level-badge">EASY</span><span id="board-size">6 × 6 grid</span></div>
-                <div class="timer-area"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="timer" aria-label="Elapsed time">00:00</span><button class="icon-button" id="pause-button" title="Pause puzzle" aria-label="Pause puzzle"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button></div>
+                <div class="timer-area"><button class="icon-button sound-button" id="sound-button" type="button" aria-pressed="true" aria-label="Mute idle reminder sound" title="Mute idle reminder sound"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4V4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-slash" d="m16 9 5 6m0-6-5 6"/></svg></button><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="timer" aria-label="Elapsed time">00:00</span><button class="icon-button" id="pause-button" title="Pause puzzle" aria-label="Pause puzzle"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button></div>
             </div>
             <div class="board-area"><div id="board" class="board" role="group" aria-label="Kakuro grid"></div><div class="pause-overlay" id="pause-overlay" hidden><span class="pause-symbol">Ⅱ</span><h2>A little breather.</h2><p>Your puzzle will be right here.</p><button class="primary-button" id="resume-button">Back to the puzzle <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></div>
             <p id="board-scroll-tip" class="board-scroll-tip" hidden>Swipe or scroll sideways to see the full grid.</p>

@@ -36,6 +36,9 @@ Then open **http://127.0.0.1:8080**. Stop the server with Ctrl+C. On Windows, `p
 - Fill white cells with digits **1–9**. Each across/down run must equal its clue sum, with **no repeated digits**. Top-right clues point across; bottom-left clues point down.
 - Underlined starter digits are fixed. Each puzzle has exactly one solution with its starter digits.
 - On-screen number pad, keyboard controls, pencil notes, undo, erase, pause, restart, answer checking, and a completion screen.
+- Solving a puzzle launches a short confetti celebration. It respects reduced-motion preferences and does not replay when reopening an already completed save.
+- After your first interaction with the board, intense suspense music starts after **10 seconds without entering a digit**. This original, ten-second piece combines minor-key chords, a rising arpeggio melody, driving bass, and percussion. It plays once per idle stretch; entering another digit (including a pencil note) or using a hint stops the music and resets the reminder. Pausing, opening a dialog, hiding the tab, or completing the puzzle also silences it. Returning to active play gives you a fresh ten-second window if no reminder has sounded yet.
+- The **speaker button beside the timer** turns idle reminder sounds on or off and remembers your choice. Audio uses the browser's built-in synthesizer, so no sound downloads or external services are needed. Browser sound permission and device volume still apply.
 - **N** toggles notes, **Backspace/Delete** erases, **Ctrl/Cmd+Z** undoes, and arrow keys move between cells.
 - Three hints per puzzle. Refreshing the page or restarting the puzzle preserves the used-hint count.
 - Your active puzzle, entries, notes, timer, and used hints are saved in this browser's local storage. Saves are scoped to the site's path so separate GitHub project sites do not share progress. Adding Insane preserves existing Easy, Medium, and Hard saves. Clearing site data, changing browsers, or replacing existing puzzles starts fresh. Older PHP-session saves do not migrate.
@@ -50,6 +53,7 @@ Puzzle answers and hint limits now live in the browser, as required for a fully 
 public/index.html            Static game page
 public/assets/engine.js       Puzzle creation, checking, hints, save validation
 public/assets/game.js         Controls, notes, timer, and local saves
+public/assets/feedback.js     Confetti and the optional idle reminder sound
 public/assets/puzzles.js      Browser-ready puzzle bank
 public/assets/style.css       Responsive styles
 public/assets/favicon.svg     Game icon
@@ -80,9 +84,12 @@ Optional interface tests require jsdom and a supported Node.js version (Node.js 
 ```powershell
 npm install --prefix .qa --no-audit --no-fund jsdom
 node tests/interface.mjs
+node tests/effects.mjs
 ```
 
 These tests exercise the actual browser scripts with network access disabled in a simulated DOM. They cover all four levels, notes, undo, checking, hints and hint persistence, save/restore, pause, restarting, completion, damaged saves, and unavailable storage. They do not replace real-browser visual checks.
+
+The effects test uses a simulated clock and Web Audio context to check the ten-second trigger, the music's ten-second duration and layers, digit/notes resets, mute persistence, pause/dialog/background behavior, completion, confetti cleanup, and reduced motion. It verifies sound scheduling, not physical speaker playback. Audio is unlocked by a user interaction as required by [browser autoplay rules](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay).
 
 To regenerate the puzzle bank:
 

@@ -19,7 +19,7 @@ for (const prefix of ['/', '/Kakuro/']) {
     assert.ok(!page.body.includes('<?php'));
     assert.ok(!page.body.includes('boot-data'));
     const assets = [...page.body.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/g)].map(m => m[1]);
-    assert.equal(assets.length, 5);
+    assert.equal(assets.length, 6);
     for (const asset of assets) {
       assert.ok(!asset.startsWith('/'), `${asset} must be relative for GitHub project sites.`);
       const response = await get(asset);
