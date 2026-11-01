@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const context = vm.createContext({});
 for (const file of ['puzzles.js', 'engine.js']) vm.runInContext(readFileSync(new URL(`../public/assets/${file}`, import.meta.url), 'utf8'), context);
 const engine = context.KakuroEngine;
-const sizes = { easy: [6, 15], medium: [8, 27], hard: [10, 47] };
+const sizes = { easy: [6, 15], medium: [8, 27], hard: [10, 47], insane: [12, 77] };
 let total = 0;
 for (const [difficulty, [size, cells]] of Object.entries(sizes)) {
   for (let index = 0; index < 6; index++) for (const flags of ['00', '01', '10', '11']) {
@@ -14,6 +14,7 @@ for (const [difficulty, [size, cells]] of Object.entries(sizes)) {
     assert.equal(puzzle.size, size);
     assert.equal(Object.keys(puzzle.cells).length, size * size);
     assert.equal(Object.keys(puzzle.solution).length, cells);
+    if(difficulty==='insane')assert.ok(cells-Object.keys(puzzle.givens).length>=58);
     const membership = Object.fromEntries(Object.keys(puzzle.solution).map(k => [k, 0]));
     for (const run of puzzle.runs) {
       const digits = run.cells.map(key => puzzle.solution[key]);
@@ -46,6 +47,14 @@ for (const [difficulty, [size, cells]] of Object.entries(sizes)) {
     const restored = engine.restore(saved);
     assert.equal(restored.hintsUsed, 3);
     assert.throws(() => engine.hint(restored, {}), /All 3 hints used/);
+    if(difficulty!=='insane') {
+      for(const bankVersion of context.KakuroPuzzleBank.compatibleVersions) {
+        const legacy=engine.restore({...saved,bankVersion});
+        assert.equal(legacy.variant,variant);
+        assert.equal(legacy.hintsUsed,3);
+        assert.equal(engine.check(legacy,puzzle.solution).complete,true);
+      }
+    }
     for (const invalid of [null, [], { [key]: 10 }, { [key]: '5' }, { [key]: 1.5 }, { '99-99': 1 }]) {
       assert.throws(() => engine.check(puzzle, invalid));
     }

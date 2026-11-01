@@ -73,6 +73,9 @@
 
   function buildBoard() {
     board.replaceChildren(); buttons.clear();
+    const area = document.querySelector('.board-area');
+    area.classList.toggle('large-board', puzzle.difficulty === 'insane');
+    area.scrollLeft = 0;
     board.style.setProperty('--size', puzzle.size);
     board.className = `board ${puzzle.difficulty}`;
     board.setAttribute('aria-label', `${puzzle.difficulty} Kakuro, ${puzzle.size} by ${puzzle.size} grid`);
@@ -143,7 +146,22 @@
     $('pause-button').setAttribute('aria-label', paused ? 'Resume puzzle' : 'Pause puzzle');
     $('pause-button').title = paused ? 'Resume puzzle' : 'Pause puzzle';
     document.querySelectorAll('[data-digit]').forEach(b => b.disabled = paused || complete);
+    updateBoardSizing();
     renderRuns(runs);
+  }
+
+  function updateBoardSizing() {
+    const area = document.querySelector('.board-area');
+    $('board-scroll-tip').hidden = puzzle.difficulty !== 'insane' || area.scrollWidth <= area.clientWidth;
+  }
+
+  function revealSelected() {
+    if (puzzle.difficulty !== 'insane') return;
+    const area = document.querySelector('.board-area'), cell = buttons.get(selected);
+    if (!cell) return;
+    const viewport = area.getBoundingClientRect(), bounds = cell.getBoundingClientRect();
+    if (bounds.left < viewport.left) area.scrollLeft += bounds.left - viewport.left - 8;
+    else if (bounds.right > viewport.right) area.scrollLeft += bounds.right - viewport.right + 8;
   }
 
   function renderRuns(runs) {
@@ -211,6 +229,7 @@
     selected = result.key; started = true;
     message(`A little nudge: this square is ${result.value}. ${3 - puzzle.hintsUsed} hints remaining.`);
     render(); save();
+    revealSelected();
     if (Object.keys(values).length === buttons.size) check(false);
   }
 
@@ -254,6 +273,7 @@
   function togglePause() {
     if (complete) return;
     paused = !paused; lastTick = performance.now(); render(); save();
+    if (paused && puzzle.difficulty === 'insane') document.querySelector('.board-area').scrollLeft = 0;
     if (paused) $('resume-button').focus(); else buttons.get(selected)?.focus();
   }
 
@@ -262,7 +282,7 @@
     const [r, c] = selected.split('-').map(Number);
     for (let row = r + dr, col = c + dc; row >= 0 && col >= 0 && row < puzzle.size && col < puzzle.size; row += dr, col += dc) {
       const key = `${row}-${col}`;
-      if (isEntry(key)) { selected = key; render(); buttons.get(key).focus(); save(); return; }
+      if (isEntry(key)) { selected = key; render(); buttons.get(key).focus(); revealSelected(); save(); return; }
     }
   }
 
@@ -316,5 +336,7 @@
   }, 500);
   document.addEventListener('visibilitychange', () => { lastTick = performance.now(); save(); });
   window.addEventListener('pagehide', save);
+  window.addEventListener('resize', updateBoardSizing);
   load(restored);
+  revealSelected();
 })();

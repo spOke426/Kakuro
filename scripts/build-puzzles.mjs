@@ -8,6 +8,7 @@ const combinations = new Map();
 for(let m=1;m<=ALL;m++) { const key=`${pop(m)}:${sum(m)}`; if(!combinations.has(key)) combinations.set(key,[]); combinations.get(key).push(m); }
 const shuffle = a => { for(let i=a.length-1;i>0;i--) {const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
 function structure(mask) {
+  if (!mask.length || mask.some(row => row.length !== mask.length || !/^[#.]+$/.test(row)) || mask[0].includes('.') || mask.some(row => row[0] !== '#')) throw Error('Invalid square board mask or clue border.');
   const cells=[], runs=[], memberships=[];
   for(let r=0;r<mask.length;r++) for(let c=0;c<mask[0].length;c++) if(mask[r][c]==='.') cells.push([r,c]);
   const ids = new Map(cells.map(([r,c],i)=>[`${r},${c}`,i]));
@@ -42,7 +43,7 @@ function randomFill(board) {
   search(); return values;
 }
 function solve(board, targets, limit=2, maxNodes=20000, givens={}) {
-  let nodes=0; const solutions=[];
+  let nodes=0,rootUnresolved=0; const solutions=[];
   const combos=board.runs.map((r,i)=>combinations.get(`${r.cells.length}:${targets[i]}`)??[]);
   function propagate(domains) {
     let changed=true;
@@ -79,17 +80,19 @@ function solve(board, targets, limit=2, maxNodes=20000, givens={}) {
   function search(domains) {
     if(++nodes>maxNodes || solutions.length>=limit)return;
     if(!propagate(domains))return;
+    if(nodes===1)rootUnresolved=domains.filter(mask=>pop(mask)>1).length;
     let chosen=-1,count=10;
     for(let i=0;i<domains.length;i++){const n=pop(domains[i]);if(n>1&&n<count){chosen=i;count=n;}}
     if(chosen<0){solutions.push(domains.map(m=>bits(m)[0]));return;}
     for(const digit of bits(domains[chosen])){const next=domains.slice();next[chosen]=1<<(digit-1);search(next);if(solutions.length>=limit)return;}
   }
-  search(Array.from({length:board.cells.length},(_,i)=>givens[i] ? 1<<(givens[i]-1) : ALL)); return {solutions,nodes,complete:nodes<=maxNodes};
+  search(Array.from({length:board.cells.length},(_,i)=>givens[i] ? 1<<(givens[i]-1) : ALL)); return {solutions,nodes,rootUnresolved,complete:nodes<=maxNodes};
 }
 const masks={
   easy:['######','#..###','#....#','##....','###...','###..#'],
   medium:['########','###..###','###...##','#......#','#..##..#','#......#','##....##','###..###'],
-  hard:['##########','###...####','###....###','#...#....#','#...#....#','##..#..###','##..#....#','#....#...#','#....#...#','###..#####']
+  hard:['##########','###...####','###....###','#...#....#','#...#....#','##..#..###','##..#....#','#....#...#','#....#...#','###..#####'],
+  insane:['############','###....#####','###......###','#....#.....#','#....#.....#','##....#.....','##....#.....','#...#......#','#...#......#','###.....#..#','####....####','####..######']
 };
 const verify=process.argv.includes('--verify');
 if(verify) {
@@ -99,14 +102,21 @@ if(verify) {
     const board=structure(puzzle.mask),targets=board.runs.map(r=>r.cells.reduce((s,i)=>s+puzzle.solution[i],0));
     const result=solve(board,targets,2,20000,puzzle.givens??{});
     if(!result.complete||result.solutions.length!==1||JSON.stringify(result.solutions[0])!==JSON.stringify(puzzle.solution))throw Error(`Invalid ${difficulty} puzzle`);
+    if(difficulty==='insane'&&(result.nodes<9||result.rootUnresolved<36||Object.keys(puzzle.givens).length>19))throw Error('Insane puzzle does not meet the complexity threshold.');
+    if(process.argv.includes('--metrics')) console.log(`${difficulty}: ${board.cells.length} cells, ${Object.keys(puzzle.givens).length} starters, ${result.rootUnresolved} unresolved after propagation, ${result.nodes} search nodes`);
     total++;
   }
   console.log(`PASS: ${total} puzzles have exactly one solution; all runs use 2–9 distinct digits.`);
 } else {
-  const bank={};
+  const option=process.argv.indexOf('--difficulty');
+  const selected=option<0?null:process.argv[option+1];
+  if(option>=0&&!Object.hasOwn(masks,selected))throw Error('Choose a valid difficulty after --difficulty.');
+  const bank=selected?JSON.parse(fs.readFileSync(new URL('../data/puzzles.json',import.meta.url))):{};
   for(const [difficulty,mask] of Object.entries(masks)) {
-    bank[difficulty]=[]; const board=structure(mask);
+    if(selected&&selected!==difficulty)continue;
+    bank[difficulty]=[]; const board=structure(mask); let attempts=0;
     while(bank[difficulty].length<6) {
+      if(++attempts>500)throw Error(`Could not find enough ${difficulty} puzzles within 500 candidates.`);
       const solution=randomFill(board), targets=board.runs.map(r=>r.cells.reduce((s,i)=>s+solution[i],0)),givens={};
       let result=solve(board,targets,2,1500,givens);
       while(!result.complete||result.solutions.length!==1) {
@@ -117,6 +127,13 @@ if(verify) {
       for(const id of shuffle(Object.keys(givens))) {
         const value=givens[id]; delete givens[id]; const check=solve(board,targets,2,1500,givens);
         if(!check.complete||check.solutions.length!==1)givens[id]=value;
+      }
+      if(difficulty==='insane') {
+        const rating=solve(board,targets,2,20000,givens);
+        if(!rating.complete||rating.solutions.length!==1||rating.nodes<9||rating.rootUnresolved<36||Object.keys(givens).length>19) {
+          if(attempts%5===0)console.log(`insane: searching (${attempts} candidates, ${bank[difficulty].length}/6 accepted)`);
+          continue;
+        }
       }
       bank[difficulty].push({mask,solution,givens});
       console.log(`${difficulty}: ${bank[difficulty].length}/6 (${Object.keys(givens).length} starter digits)`);

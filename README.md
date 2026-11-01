@@ -1,6 +1,6 @@
 # Kakuro for GitHub Pages
 
-A complete browser-based Kakuro game with **Easy, Medium, and Hard** difficulties. The original PHP functionality has been converted to JavaScript, so the game runs on GitHub Pages without PHP, a database, an API, or a build service.
+A complete browser-based Kakuro game with **Easy, Medium, Hard, and Insane** difficulties. The original PHP functionality has been converted to JavaScript, so the game runs on GitHub Pages without PHP, a database, an API, or a build service.
 
 ## Publish on GitHub Pages
 
@@ -31,13 +31,14 @@ Then open **http://127.0.0.1:8080**. Stop the server with Ctrl+C. On Windows, `p
 - **Easy:** 6 × 6 grid, 15 white squares.
 - **Medium:** 8 × 8 grid, 27 white squares.
 - **Hard:** 10 × 10 grid, 47 white squares.
+- **Insane:** 12 × 12 grid, 77 white squares, with 58–60 to fill. The hardest mode combines longer intersecting runs and puzzles screened for more solver branching than the current Hard set. On small screens, swipe the grid sideways to keep its numbers readable.
 - Six verified base puzzles per level, with transpose and digit-complement variations: **24 variants per difficulty**.
 - Fill white cells with digits **1–9**. Each across/down run must equal its clue sum, with **no repeated digits**. Top-right clues point across; bottom-left clues point down.
 - Underlined starter digits are fixed. Each puzzle has exactly one solution with its starter digits.
 - On-screen number pad, keyboard controls, pencil notes, undo, erase, pause, restart, answer checking, and a completion screen.
 - **N** toggles notes, **Backspace/Delete** erases, **Ctrl/Cmd+Z** undoes, and arrow keys move between cells.
 - Three hints per puzzle. Refreshing the page or restarting the puzzle preserves the used-hint count.
-- Your active puzzle, entries, notes, timer, and used hints are saved in this browser's local storage. Saves are scoped to the site's path so separate GitHub project sites do not share progress. Clearing site data, changing browsers, or a new puzzle-bank version starts fresh. Older PHP-session saves do not migrate.
+- Your active puzzle, entries, notes, timer, and used hints are saved in this browser's local storage. Saves are scoped to the site's path so separate GitHub project sites do not share progress. Adding Insane preserves existing Easy, Medium, and Hard saves. Clearing site data, changing browsers, or replacing existing puzzles starts fresh. Older PHP-session saves do not migrate.
 - The timer pauses while the puzzle is paused, the tab is hidden, or a dialog is open. After the page has loaded, playing and switching puzzles require no network requests.
 
 Puzzle answers and hint limits now live in the browser, as required for a fully static game. They can be inspected or modified with browser developer tools; this is a casual single-player game, not a tamper-proof competition.
@@ -81,7 +82,7 @@ npm install --prefix .qa --no-audit --no-fund jsdom
 node tests/interface.mjs
 ```
 
-These tests exercise the actual browser scripts with network access disabled in a simulated DOM. They cover all three levels, notes, undo, checking, hints and hint persistence, save/restore, pause, restarting, completion, damaged saves, and unavailable storage. They do not replace real-browser visual checks.
+These tests exercise the actual browser scripts with network access disabled in a simulated DOM. They cover all four levels, notes, undo, checking, hints and hint persistence, save/restore, pause, restarting, completion, damaged saves, and unavailable storage. They do not replace real-browser visual checks.
 
 To regenerate the puzzle bank:
 
@@ -92,3 +93,5 @@ node scripts/package-puzzles.mjs
 ```
 
 Commit both `data/puzzles.json` and `public/assets/puzzles.js`. The packaged file is already included, so normal Pages deployment needs no Node.js build step. Difficulty is based on grid size and run complexity, not a calibrated human-solving rating.
+
+To regenerate only one difficulty while retaining the others, use `node scripts/build-puzzles.mjs --difficulty insane`, then verify and package as above. Insane generation requires a unique solution, at most 19 starter digits, at least 36 unresolved cells after constraint propagation, and at least 9 solver search nodes. Use `node scripts/build-puzzles.mjs --verify --metrics` to inspect those metrics. The packager retains save compatibility when levels are added without changing existing puzzles.

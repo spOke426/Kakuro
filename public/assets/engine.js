@@ -2,12 +2,12 @@
   'use strict';
   const bank = globalThis.KakuroPuzzleBank;
   if (!bank?.puzzles) throw new Error('The puzzle bank did not load. Reload the page.');
-  const levels = Object.freeze({ easy: 6, medium: 8, hard: 10 });
+  const levels = Object.freeze({ easy: 6, medium: 8, hard: 10, insane: 12 });
   const validDigit = n => Number.isInteger(n) && n >= 1 && n <= 9;
   const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
   function fromVariant(variant) {
-    const match = typeof variant === 'string' && /^(easy|medium|hard)-(\d+)-([01])([01])$/.exec(variant);
+    const match = typeof variant === 'string' && /^(easy|medium|hard|insane)-(\d+)-([01])([01])$/.exec(variant);
     if (!match) throw new Error('Unknown puzzle.');
     const [, difficulty, index, transposeFlag, complementFlag] = match;
     const source = bank.puzzles[difficulty][Number(index)];
@@ -52,7 +52,7 @@
   }
 
   function create(difficulty, previous = null) {
-    if (!Object.hasOwn(levels, difficulty)) throw new Error('Choose Easy, Medium, or Hard.');
+    if (!Object.hasOwn(levels, difficulty)) throw new Error('Choose Easy, Medium, Hard, or Insane.');
     const choices = bank.puzzles[difficulty].flatMap((_, index) =>
       ['00', '01', '10', '11'].map(flags => `${difficulty}-${index}-${flags}`)
     ).filter(variant => variant !== previous);
@@ -90,7 +90,7 @@
   }
 
   function restore(saved) {
-    if (!isRecord(saved) || saved.version !== 2 || saved.bankVersion !== bank.version) {
+    if (!isRecord(saved) || saved.version !== 2 || (saved.bankVersion !== bank.version && !bank.compatibleVersions?.includes(saved.bankVersion))) {
       throw new Error('Saved puzzle is incompatible.');
     }
     const puzzle = fromVariant(saved.variant);
