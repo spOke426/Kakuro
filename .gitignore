@@ -1,0 +1,4 @@
+.tools/
+.runtime/
+.qa/
+*.log

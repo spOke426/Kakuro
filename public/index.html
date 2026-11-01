@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f7fb">
+    <meta name="description" content="A quiet place for a good puzzle. Play Kakuro at three difficulty levels, with pencil notes, hints, and saved progress.">
+    <title>Kakuro — A little daily logic</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/style.css">
+    <script src="assets/puzzles.js" defer></script>
+    <script src="assets/engine.js" defer></script>
+    <script src="assets/game.js" defer></script>
+</head>
+<body>
+<header class="site-header">
+    <a class="brand" href="./" aria-label="Kakuro home"><span class="brand-mark"><i></i><i></i><i></i><i></i></span>kakuro<span class="brand-dot">.</span></a>
+    <span class="header-caption">A LITTLE DAILY LOGIC</span>
+    <button class="help-button text-button" id="help-button"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 1 1 4 2c-1.5 1-1.5 1.5-1.5 3M12 17h.01"/></svg><span>How to play</span></button>
+</header>
+<main>
+    <section class="intro" aria-labelledby="page-title">
+        <div><div class="eyebrow"><span></span> LESS SCROLLING. MORE SOLVING.</div><h1 id="page-title">Find your flow<span>.</span></h1><p>A few numbers. A little focus. One satisfying solution.</p></div>
+        <div class="intro-note"><span class="note-spark">✳</span> Make a little room<br>for your mind.</div>
+    </section>
+    <div class="game-layout">
+        <section class="game-card" aria-label="Kakuro puzzle">
+            <div class="game-toolbar">
+                <div class="puzzle-label"><span class="level-badge" id="level-badge">EASY</span><span id="board-size">6 × 6 grid</span></div>
+                <div class="timer-area"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="timer" aria-label="Elapsed time">00:00</span><button class="icon-button" id="pause-button" title="Pause puzzle" aria-label="Pause puzzle"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button></div>
+            </div>
+            <div class="board-area"><div id="board" class="board" role="group" aria-label="Kakuro grid"></div><div class="pause-overlay" id="pause-overlay" hidden><span class="pause-symbol">Ⅱ</span><h2>A little breather.</h2><p>Your puzzle will be right here.</p><button class="primary-button" id="resume-button">Back to the puzzle <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></div>
+            <div class="board-caption"><span class="small-dot"></span><span id="board-caption">Select a cell to get started</span><span id="progress-label">0 / 15</span></div>
+            <div class="progress-track"><div id="progress-fill"></div></div>
+            <div class="play-controls">
+                <div class="tool-row">
+                    <button class="tool-button" id="notes-button" aria-pressed="false" title="Pencil notes (N)"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6L16 3Zm-2 2 5 5"/></svg>Notes<span class="key-hint">N</span></button>
+                    <div class="tool-divider"></div>
+                    <button class="tool-button" id="undo-button" title="Undo (Ctrl+Z)"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h10a6 6 0 0 1 0 12M4 10l5-5m-5 5 5 5" transform="translate(0 -3)"/></svg>Undo</button>
+                    <button class="tool-button" id="erase-button" title="Erase (Backspace)"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 20-6-6a2 2 0 0 1 0-3L13 1a2 2 0 0 1 3 0l6 6a2 2 0 0 1 0 3L12 20H9Zm-3-9 9 9m-3 0h10"/></svg>Erase</button>
+                    <button class="icon-button restart-button" id="restart-button" title="Restart this puzzle" aria-label="Restart this puzzle"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5 8a8 8 0 0 1 13-3l2 3M4 16l2 3a8 8 0 0 0 13-3"/></svg></button>
+                </div>
+                <div class="number-pad" aria-label="Number pad"><button type="button" data-digit="1" aria-label="Enter 1">1</button><button type="button" data-digit="2" aria-label="Enter 2">2</button><button type="button" data-digit="3" aria-label="Enter 3">3</button><button type="button" data-digit="4" aria-label="Enter 4">4</button><button type="button" data-digit="5" aria-label="Enter 5">5</button><button type="button" data-digit="6" aria-label="Enter 6">6</button><button type="button" data-digit="7" aria-label="Enter 7">7</button><button type="button" data-digit="8" aria-label="Enter 8">8</button><button type="button" data-digit="9" aria-label="Enter 9">9</button></div>
+                <div class="action-row"><button class="secondary-button" id="hint-button"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6m-6 3h6M8 14a7 7 0 1 1 8 0c-1 1-1 2-1 4H9c0-2 0-3-1-4Z"/></svg>Get a hint<span id="hint-count">3 left</span></button><button class="check-button" id="check-button"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Check answers</button></div>
+            </div>
+            <div id="status" class="status-message" role="status" aria-live="polite">Take your time. There’s no rush.</div>
+        </section>
+        <aside class="sidebar">
+            <section class="side-card difficulty-card"><div class="section-eyebrow">YOUR NEXT CHALLENGE</div><h2>Set your pace</h2><p>A small win or a proper workout?</p>
+                <fieldset class="difficulty-options"><legend class="sr-only">Puzzle difficulty</legend>
+                <label class="difficulty-option"><input type="radio" name="difficulty" value="easy" checked><span class="difficulty-symbol easy"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Easy</strong><small>A gentle warm-up</small></span><span class="difficulty-size">6 × 6</span><span class="radio-dot"></span></label><label class="difficulty-option"><input type="radio" name="difficulty" value="medium" ><span class="difficulty-symbol medium"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Medium</strong><small>Find your rhythm</small></span><span class="difficulty-size">8 × 8</span><span class="radio-dot"></span></label><label class="difficulty-option"><input type="radio" name="difficulty" value="hard" ><span class="difficulty-symbol hard"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Hard</strong><small>Go a little deeper</small></span><span class="difficulty-size">10 × 10</span><span class="radio-dot"></span></label>                </fieldset>
+                <button class="primary-button new-game-button" id="new-game-button">New puzzle <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+                <div class="save-note"><span class="small-dot"></span>Progress saved as you play</div>
+            </section>
+            <section class="side-card run-card"><div class="section-eyebrow">ONE SUM AT A TIME</div><h2>Your selected cell</h2><div id="run-details" class="run-details"><p>Pick a white square to see its across and down clues.</p></div></section>
+            <section class="rules-card"><div class="rules-title"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6m-6 3h6M8 14a7 7 0 1 1 8 0c-1 1-1 2-1 4H9c0-2 0-3-1-4Z"/></svg><h2>Small rules. Big possibilities.</h2></div><ol><li><span>01</span><p>Fill each white square with a digit from <strong>1 to 9</strong>.</p></li><li><span>02</span><p>Each run must add up to its clue. <strong>No repeated digits</strong> in a run.</p></li><li><span>03</span><p>Clues above the diagonal go <strong>across →</strong>. Below it, <strong>down ↓</strong>.</p></li></ol><button class="text-link" id="example-button">Show me an example <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></section>
+        </aside>
+    </div>
+    <div class="keyboard-help"><span class="keyboard-icon">⌨</span><span><kbd>1–9</kbd> enter a number</span><span><kbd>↑ ↓ ← →</kbd> move</span><span><kbd>N</kbd> pencil notes</span><span><kbd>⌫</kbd> erase</span></div>
+    <footer><span>A little challenge. A clearer mind.</span><span>Made for the joy of figuring it out<span class="footer-star"> ✳</span></span></footer>
+</main>
+<dialog id="help-dialog"><button class="dialog-close icon-button" data-close aria-label="Close instructions"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button><div class="section-eyebrow">MEET YOUR NEW BRAIN BREAK</div><h2>A crossword, with numbers.</h2><p>Fill the white squares with digits 1–9. Each uninterrupted horizontal or vertical run adds up to the number in its dark clue square. A digit can only appear once in each run.</p><div class="example-grid"><div class="example-clue"><span>4</span></div><div>1</div><div>3</div></div><p class="example-caption"><strong>1 + 3 = 4.</strong> Two cells, one sum. Both numbers are different.</p><p>The top-right clue points <strong>across →</strong>; the bottom-left clue points <strong>down ↓</strong>. Every white square belongs to both an across and a down run.</p><p>Small, underlined starter numbers are fixed. Use <strong>Notes</strong> to pencil in possibilities, <strong>Check answers</strong> to spot mistakes, and up to <strong>3 hints</strong> when you’re stuck.</p><button class="primary-button" data-close>Let’s play <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></dialog>
+<dialog id="confirm-dialog"><div class="section-eyebrow">A FRESH START</div><h2 id="confirm-title">Start a new puzzle?</h2><p id="confirm-copy">Your current progress will be replaced.</p><div class="dialog-actions"><button class="secondary-button" id="confirm-cancel">Keep playing</button><button class="primary-button" id="confirm-yes">Start fresh <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></dialog>
+<dialog id="win-dialog"><button class="dialog-close icon-button" data-close aria-label="Close results"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button><div class="win-art">✳</div><div class="section-eyebrow">EVERY NUMBER IN ITS PLACE</div><h2>That’s a good feeling.</h2><p>You found the flow and solved the puzzle.</p><div id="win-stats" class="win-stats"></div><button class="primary-button" id="win-next">One more puzzle <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></dialog>
+<noscript><div class="noscript">Enable JavaScript to play. Your puzzle runs entirely in this browser.</div></noscript>
+</body>
+</html>
