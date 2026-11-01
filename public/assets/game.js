@@ -31,6 +31,11 @@
   };
   const hasDialog = () => Boolean(document.querySelector('dialog[open]'));
   const message = (text, type = '') => { $('status').textContent = text; $('status').className = `status-message ${type}`; };
+  const feedback = globalThis.KakuroFeedback.create({
+    soundButton: $('sound-button'), celebrationHost: $('win-dialog'),
+    settingsKey: `kakuro:settings:${new URL('.', location.href).pathname}`,
+    isActive: () => started && !paused && !complete && !document.hidden && !hasDialog(),
+  });
 
   function save() {
     try {
@@ -45,6 +50,7 @@
   }
 
   function load(saved = null) {
+    feedback.reset();
     values = {...puzzle.givens}; notes = {}; selected = null; elapsed = 0;
     history = []; errors = new Set(); paused = false; complete = false; started = false;
     notesMode = false;
@@ -68,7 +74,7 @@
     $('board-size').textContent = `${puzzle.size} × ${puzzle.size} grid`;
     document.querySelector(`input[name="difficulty"][value="${puzzle.difficulty}"]`).checked = true;
     buildBoard(); render(); save();
-    if (Object.keys(values).length === buttons.size) check(false);
+    if (Object.keys(values).length === buttons.size) check(false, false);
   }
 
   function buildBoard() {
@@ -91,6 +97,7 @@
         node.addEventListener('click', () => {
           if (paused) return;
           selected = key; started = true; render(); save();
+          feedback.interact();
           if (fixed(key)) message('This starter number is fixed. Select an empty square to play.');
           else message(notesMode ? 'Pencil mode is on. Add or remove possible numbers.' : 'Use the number pad or type a digit from 1 to 9.');
         });
@@ -148,6 +155,7 @@
     document.querySelectorAll('[data-digit]').forEach(b => b.disabled = paused || complete);
     updateBoardSizing();
     renderRuns(runs);
+    feedback.sync();
   }
 
   function updateBoardSizing() {
@@ -189,6 +197,7 @@
     if (!selected) return message('Select a white square first.');
     if (fixed(selected)) return message('This starter number is fixed. Try another square.');
     snapshot(); started = true; errors.delete(selected);
+    if (digit) feedback.digitEntered(); else feedback.interact();
     if (notesMode && digit) {
       delete values[selected];
       const set = new Set(notes[selected] || []);
@@ -204,14 +213,14 @@
     if (Object.keys(values).length === buttons.size) check(false);
   }
 
-  function check(explicit = true) {
+  function check(explicit = true, celebrate = true) {
     if (paused || complete) return;
     const result = engine.check(puzzle, values);
     errors = new Set(result.incorrect);
     if (result.complete) {
       complete = true;
       message('Solved! A little focus goes a long way.', 'success');
-      render(); save(); showWin();
+      render(); save(); showWin(celebrate);
     } else {
       if (errors.size) message(`${errors.size} ${errors.size === 1 ? 'entry needs' : 'entries need'} another look. Highlighted in pink.`, 'error');
       else if (explicit) message(`Looking good! ${result.total - result.filled} squares left to discover.`, 'success');
@@ -227,6 +236,7 @@
     snapshot(); values[result.key] = result.value; delete notes[result.key]; errors.delete(result.key);
     puzzle.hintsUsed = result.hintsUsed; puzzle.hinted[result.key] = result.value;
     selected = result.key; started = true;
+    feedback.digitEntered();
     message(`A little nudge: this square is ${result.value}. ${3 - puzzle.hintsUsed} hints remaining.`);
     render(); save();
     revealSelected();
@@ -236,6 +246,7 @@
   function confirmAction(title, copy, action) {
     confirming = action; $('confirm-title').textContent = title; $('confirm-copy').textContent = copy;
     $('confirm-dialog').showModal();
+    feedback.sync();
   }
 
   function newPuzzle() {
@@ -252,6 +263,7 @@
 
   function restart() {
     confirmAction('Try this one again?', 'Clear your answers, notes, and timer. Used hints stay used.', () => {
+      feedback.reset();
       values = {...puzzle.givens}; notes = {}; history = []; errors.clear(); elapsed = 0;
       complete = false; paused = false; started = false;
       render(); save(); message('A fresh look at a familiar puzzle.');
@@ -286,7 +298,7 @@
     }
   }
 
-  function showWin() {
+  function showWin(celebrate) {
     const stats = $('win-stats'); stats.replaceChildren();
     for (const [label, value] of [['Difficulty', puzzle.difficulty[0].toUpperCase() + puzzle.difficulty.slice(1)], ['Your time', formatTime(elapsed)], ['Hints used', `${puzzle.hintsUsed} / 3`]]) {
       const item = document.createElement('div'); item.className = 'win-stat';
@@ -295,10 +307,13 @@
       item.append(number, caption); stats.appendChild(item);
     }
     $('win-dialog').showModal();
+    if (celebrate) feedback.celebrate();
   }
 
-  $('help-button').addEventListener('click', () => $('help-dialog').showModal());
-  $('example-button').addEventListener('click', () => $('help-dialog').showModal());
+  const showHelp = () => { $('help-dialog').showModal(); feedback.sync(); };
+  $('help-button').addEventListener('click', showHelp);
+  $('example-button').addEventListener('click', showHelp);
+  document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('close', () => feedback.sync()));
   document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
   document.querySelectorAll('[data-digit]').forEach(b => b.addEventListener('click', () => enter(Number(b.dataset.digit))));
   $('notes-button').addEventListener('click', toggleNotes);
@@ -334,8 +349,11 @@
     $('timer').textContent = formatTime(elapsed);
     if (now - lastSave > 5000) { save(); lastSave = now; }
   }, 500);
-  document.addEventListener('visibilitychange', () => { lastTick = performance.now(); save(); });
-  window.addEventListener('pagehide', save);
+  document.addEventListener('visibilitychange', () => {
+    lastTick = performance.now(); save(); feedback.sync();
+    if (document.hidden) feedback.clearCelebration();
+  });
+  window.addEventListener('pagehide', () => { save(); feedback.reset(); });
   window.addEventListener('resize', updateBoardSizing);
   load(restored);
   revealSelected();
