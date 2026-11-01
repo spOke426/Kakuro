@@ -9,3 +9,20 @@
 @media(max-width:680px){.site-header{height:74px;padding:0 10px;margin:0 15px}.brand{font-size:26px}.header-caption{display:none}.help-button{font-size:11px}main{margin:0 20px;padding-bottom:24px}.intro{padding:29px 1px 26px}.intro h1{font-size:38px;margin-top:11px}.intro p{font-size:11px;line-height:1.7}.intro-note{display:none}.eyebrow{font-size:8px;letter-spacing:1.4px}.game-layout{display:flex;flex-direction:column;gap:20px}.game-card{width:100%;border-radius:14px}.game-toolbar{height:62px;padding:0 22px}.board-area{padding:0 25px}.board{max-width:420px}.cell{font-size:27px}.clue-number{font-size:13px}.board.hard .cell{font-size:21px}.board.hard .clue-number{font-size:10px}.cell-notes{font-size:10px}.board.hard .cell-notes{font-size:8px}.board-caption{margin:15px 25px 10px}.progress-track{margin:0 25px}.play-controls{padding:12px 21px 0}.tool-row{gap:18px;margin-bottom:14px}.tool-button{font-size:11px}.number-pad button{height:43px;font-size:19px}.action-row{margin-top:14px;gap:12px}.action-row button{font-size:11px;min-height:43px}.status-message{min-height:46px;padding:12px 18px 15px}.sidebar{display:grid;grid-template-columns:1fr;gap:17px;width:100%}.side-card{padding:23px}.difficulty-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:17px 0}.difficulty-option{display:grid;grid-template-columns:1fr auto;gap:9px;padding:12px;min-height:93px}.difficulty-symbol{height:18px}.difficulty-copy{grid-row:2;grid-column:1 / -1}.difficulty-copy small{font-size:8px}.difficulty-copy strong{font-size:12px}.radio-dot{grid-column:2;grid-row:1}.difficulty-size{display:none}.side-card h2{font-size:20px}.run-card{display:none}.rules-card{padding:9px 9px 5px}.rules-card ol{gap:12px;margin:16px 0}.rules-card li p{font-size:11px}.rules-title h2{font-size:13px}.rules-card li>span{font-size:10px}.text-link{font-size:11px}.keyboard-help{display:none}footer{margin-top:27px;font-size:8px;gap:18px;line-height:1.7}.footer-star{display:none}dialog{padding:33px 25px}.dialog-actions{flex-direction:column-reverse}}
 @media(max-width:380px){main{margin:0 12px}.board-area{padding:0 16px}.play-controls{padding-left:15px;padding-right:15px}.number-pad{gap:4px}.number-pad button{height:38px;font-size:18px}.tool-row{gap:13px}.board.hard .cell{font-size:18px}.board.hard .clue-number{font-size:9px}.board.hard .cell-notes{font-size:7px}.difficulty-option{padding:9px}.difficulty-copy small{font-size:7px}.side-card{padding:20px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+
+/* Insane keeps its larger grid readable; only the board scrolls on small screens. */
+.level-badge.insane{background:#fbe9f0;color:#99375e}
+.difficulty-symbol.insane{width:25px;height:26px;flex-shrink:0}
+.difficulty-symbol.insane i{background:#b25a7b}
+.difficulty-symbol.insane i:nth-child(4){height:20px}
+.difficulty-option:has(input[value="insane"]:checked){border-color:#cd91aa;background:#fff5f8}
+.difficulty-option input[value="insane"]:checked~.radio-dot{border-color:#a94c70}
+.difficulty-option:has(input[value="insane"]) strong{color:#99375e}
+.board-area.large-board{overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px}
+.board.insane{min-width:480px;max-width:520px}
+.board.insane .cell{font-size:22px}
+.board.insane .clue-number{font-size:11px}
+.board.insane .cell-notes{inset:2px;font-size:9px}
+.board-scroll-tip{margin:10px 25px 0;text-align:center;color:#71697e;font-size:11px;line-height:1.6}
+.board-area.large-board:has(.pause-overlay:not([hidden])) .board{visibility:hidden}
+@media(max-width:680px){.difficulty-options{grid-template-columns:repeat(2,minmax(0,1fr))}.difficulty-copy small{font-size:10px}.difficulty-symbol.insane{height:24px}}

@@ -95,18 +95,34 @@ try {
   click('input[value="hard"]');click('#new-game-button');await settle();
   assert.equal($('#level-badge').textContent,'HARD');
   assert.equal(dom.window.document.querySelectorAll('.cell.entry').length,47);
+  click('input[value="insane"]');click('#new-game-button');await settle();
+  assert.equal($('#level-badge').textContent,'INSANE');
+  assert.equal($('#board-size').textContent,'12 × 12 grid');
+  assert.equal(dom.window.document.querySelectorAll('.cell.entry').length,77);
+  assert.ok($('.board-area').classList.contains('large-board'));
+  assert.ok($('#board').classList.contains('insane'));
+  assert.equal(dom.window.document.querySelectorAll('input[name="difficulty"]').length,4);
   click('#help-button');assert.ok($('#help-dialog').open);click('#help-dialog [data-close]');
 
   // The hint budget survives both reloading and restarting without PHP sessions.
   click('#hint-button');click('#hint-button');click('#hint-button');
   assert.equal($('#hint-count').textContent,'0 left');assert.ok($('#hint-button').disabled);
   let saved=savedState();dom.window.close();await open(saved);
-  assert.equal($('#level-badge').textContent,'HARD');
+  assert.equal($('#level-badge').textContent,'INSANE');
   assert.equal($('#hint-count').textContent,'0 left');
   click('#restart-button');click('#confirm-yes');
   assert.equal($('#hint-count').textContent,'0 left');
   const sameVariant=activePuzzle().variant;click('#new-game-button');
   assert.notEqual(activePuzzle().variant,sameVariant);assert.equal($('#hint-count').textContent,'3 left');
+
+  // Insane supports checking and a full solve, with the correct result label.
+  const insanePuzzle=activePuzzle(),insaneSolution=solutionFor(insanePuzzle);
+  const insaneKey=$('.cell.selected').dataset.key;
+  press(String(insaneSolution[insaneKey]%9+1));click('#check-button');
+  assert.ok($(`[data-key="${insaneKey}"]`).classList.contains('is-error'));
+  for(const [cell,digit] of Object.entries(insaneSolution))if(!insanePuzzle.givens[cell]){click(`[data-key="${cell}"]`);press(String(digit));}
+  assert.ok($('#win-dialog').open);assert.ok($('#win-stats').textContent.includes('Insane'));
+  click('#win-next');assert.equal($('#level-badge').textContent,'INSANE');
 
   // Restore notes, elapsed time, and selection; discard damaged individual entries.
   const activeKey=Object.keys(savedState()).find(k=>k.startsWith('kakuro:v2:'));
@@ -123,6 +139,19 @@ try {
   assert.equal($('.cell.selected').dataset.key,noteKey);
   assert.equal($(`[data-key="${noteKey}"] .cell-notes`).textContent,'26');
   assert.equal($(`[data-key="${lockedKey}"] .value`).textContent,String(activePuzzle().givens[lockedKey]));
+
+  // The additive bank update preserves saves from the prior three-level release.
+  const previousVersion=dom.window.KakuroPuzzleBank.compatibleVersions[0];
+  assert.ok(previousVersion);
+  const previousPuzzle=dom.window.KakuroEngine.fromVariant('hard-0-00');
+  const previousKey=Object.keys(previousPuzzle.solution).find(k=>!previousPuzzle.givens[k]);
+  const previousSave={version:2,bankVersion:previousVersion,variant:previousPuzzle.variant,hintsUsed:1,hinted:{[previousKey]:previousPuzzle.solution[previousKey]},values:{...previousPuzzle.givens,[previousKey]:previousPuzzle.solution[previousKey]},notes:{},elapsed:117,started:true};
+  dom.window.close();await open({[activeKey]:JSON.stringify(previousSave)});
+  assert.equal($('#level-badge').textContent,'HARD');
+  assert.equal($('#timer').textContent,'01:57');
+  assert.equal($('#hint-count').textContent,'2 left');
+  assert.equal($(`[data-key="${previousKey}"] .value`).textContent,String(previousPuzzle.solution[previousKey]));
+  assert.ok(!$('.board-area').classList.contains('large-board'));
 
   // A corrupt/incompatible save must never stop a new game from loading.
   for(const bad of ['{broken', 'null', JSON.stringify({version:2,variant:'hard-99-00',bankVersion:record.bankVersion,hintsUsed:0}),JSON.stringify({...record,bankVersion:'obsolete'})]) {
@@ -144,5 +173,5 @@ try {
   click('input[value="medium"]');click('#new-game-button');click('#confirm-yes');
   assert.equal($('#level-badge').textContent,'MEDIUM');
   await settle();
-  console.log('PASS: all game controls, three difficulties, completion, persistent hints, saved notes/timer, damaged saves, path isolation, and local-file play; zero network requests.');
+  console.log('PASS: all game controls, four difficulties including an Insane solve, persistent hints, saved notes/timer, prior-version saves, damaged saves, path isolation, and local-file play; zero network requests.');
 } finally {dom?.window.close();}

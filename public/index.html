@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f6f7fb">
-    <meta name="description" content="A quiet place for a good puzzle. Play Kakuro at three difficulty levels, with pencil notes, hints, and saved progress.">
+    <meta name="description" content="A quiet place for a good puzzle. Play Kakuro at four difficulty levels, from Easy to Insane, with pencil notes, hints, and saved progress.">
     <title>Kakuro — A little daily logic</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="assets/style.css">
@@ -30,6 +30,7 @@
                 <div class="timer-area"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="timer" aria-label="Elapsed time">00:00</span><button class="icon-button" id="pause-button" title="Pause puzzle" aria-label="Pause puzzle"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button></div>
             </div>
             <div class="board-area"><div id="board" class="board" role="group" aria-label="Kakuro grid"></div><div class="pause-overlay" id="pause-overlay" hidden><span class="pause-symbol">Ⅱ</span><h2>A little breather.</h2><p>Your puzzle will be right here.</p><button class="primary-button" id="resume-button">Back to the puzzle <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div></div>
+            <p id="board-scroll-tip" class="board-scroll-tip" hidden>Swipe or scroll sideways to see the full grid.</p>
             <div class="board-caption"><span class="small-dot"></span><span id="board-caption">Select a cell to get started</span><span id="progress-label">0 / 15</span></div>
             <div class="progress-track"><div id="progress-fill"></div></div>
             <div class="play-controls">
@@ -48,7 +49,11 @@
         <aside class="sidebar">
             <section class="side-card difficulty-card"><div class="section-eyebrow">YOUR NEXT CHALLENGE</div><h2>Set your pace</h2><p>A small win or a proper workout?</p>
                 <fieldset class="difficulty-options"><legend class="sr-only">Puzzle difficulty</legend>
-                <label class="difficulty-option"><input type="radio" name="difficulty" value="easy" checked><span class="difficulty-symbol easy"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Easy</strong><small>A gentle warm-up</small></span><span class="difficulty-size">6 × 6</span><span class="radio-dot"></span></label><label class="difficulty-option"><input type="radio" name="difficulty" value="medium" ><span class="difficulty-symbol medium"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Medium</strong><small>Find your rhythm</small></span><span class="difficulty-size">8 × 8</span><span class="radio-dot"></span></label><label class="difficulty-option"><input type="radio" name="difficulty" value="hard" ><span class="difficulty-symbol hard"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Hard</strong><small>Go a little deeper</small></span><span class="difficulty-size">10 × 10</span><span class="radio-dot"></span></label>                </fieldset>
+                <label class="difficulty-option"><input type="radio" name="difficulty" value="easy" checked><span class="difficulty-symbol easy"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Easy</strong><small>A gentle warm-up</small></span><span class="difficulty-size">6 × 6</span><span class="radio-dot"></span></label>
+                <label class="difficulty-option"><input type="radio" name="difficulty" value="medium"><span class="difficulty-symbol medium"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Medium</strong><small>Find your rhythm</small></span><span class="difficulty-size">8 × 8</span><span class="radio-dot"></span></label>
+                <label class="difficulty-option"><input type="radio" name="difficulty" value="hard"><span class="difficulty-symbol hard"><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Hard</strong><small>Go a little deeper</small></span><span class="difficulty-size">10 × 10</span><span class="radio-dot"></span></label>
+                <label class="difficulty-option"><input type="radio" name="difficulty" value="insane"><span class="difficulty-symbol insane"><i></i><i></i><i></i><i></i></span><span class="difficulty-copy"><strong>Insane</strong><small>The ultimate test</small></span><span class="difficulty-size">12 × 12</span><span class="radio-dot"></span></label>
+                </fieldset>
                 <button class="primary-button new-game-button" id="new-game-button">New puzzle <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
                 <div class="save-note"><span class="small-dot"></span>Progress saved as you play</div>
             </section>
