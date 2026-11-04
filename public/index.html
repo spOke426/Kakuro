@@ -58,6 +58,13 @@
                 <button class="primary-button new-game-button" id="new-game-button">New puzzle <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
                 <div class="save-note"><span class="small-dot"></span>Progress saved as you play</div>
             </section>
+            <section class="side-card music-card" aria-labelledby="music-title">
+                <div class="section-eyebrow">A LITTLE SUSPENSE</div><h2 id="music-title">The Dark Night</h2>
+                <div id="music-player-host" class="music-player-host"><p>Your first move loads the soundtrack from YouTube.</p></div>
+                <p id="music-status" class="music-status" role="status" aria-live="polite">Starts after 10 seconds without a digit. Plays for up to 10 seconds.</p>
+                <button id="music-play-button" class="secondary-button" type="button" hidden>Play music</button>
+                <a class="text-link music-source" href="https://www.youtube.com/watch?v=SP0RCMtfm4o" target="_blank" rel="noopener noreferrer">Listen on YouTube ↗</a>
+            </section>
             <section class="side-card run-card"><div class="section-eyebrow">ONE SUM AT A TIME</div><h2>Your selected cell</h2><div id="run-details" class="run-details"><p>Pick a white square to see its across and down clues.</p></div></section>
             <section class="rules-card"><div class="rules-title"><svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6m-6 3h6M8 14a7 7 0 1 1 8 0c-1 1-1 2-1 4H9c0-2 0-3-1-4Z"/></svg><h2>Small rules. Big possibilities.</h2></div><ol><li><span>01</span><p>Fill each white square with a digit from <strong>1 to 9</strong>.</p></li><li><span>02</span><p>Each run must add up to its clue. <strong>No repeated digits</strong> in a run.</p></li><li><span>03</span><p>Clues above the diagonal go <strong>across →</strong>. Below it, <strong>down ↓</strong>.</p></li></ol><button class="text-link" id="example-button">Show me an example <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></section>
         </aside>

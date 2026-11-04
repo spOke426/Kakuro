@@ -9,13 +9,13 @@ const sources = [...html.matchAll(/<script\b[^>]*src="([^"]+)"/g)].map(match =>
 );
 const gameKey = 'kakuro:v2:/Kakuro/', settingsKey = 'kakuro:settings:/Kakuro/';
 
-function open({ saved = {}, reducedMotion = false, noAudio = false, blockedAudio = false, initialAudioState = 'suspended' } = {}) {
-  const dom = new JSDOM(html, { url: 'https://example.github.io/Kakuro/', runScripts: 'outside-only', pretendToBeVisual: true });
-  const w = dom.window, errors = [], tones = [], timers = new Map();
-  let now = 0, nextId = 0, hidden = false, contexts = 0, resumes = 0;
+function open({ saved = {}, reducedMotion = false, noAPI = false, blockedAudio = false, readyDelay = 0, playbackDelay = 0, url = 'https://example.github.io/Kakuro/' } = {}) {
+  const dom = new JSDOM(html, { url, runScripts: 'outside-only', pretendToBeVisual: true });
+  const w = dom.window, errors = [], plays = [], players = [], timers = new Map();
+  let now = 0, nextId = 0, hidden = false, blocked = blockedAudio;
   w.structuredClone = structuredClone;
   w.addEventListener('error', event => errors.push(event.message));
-  w.fetch = () => { throw new Error('Effects must work without network requests.'); };
+  w.fetch = () => { throw new Error('Tests use a mock YouTube player, never live media.'); };
   w.matchMedia = () => ({ matches: reducedMotion });
   w.HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
   w.HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); this.dispatchEvent(new w.Event('close')); };
@@ -26,40 +26,34 @@ function open({ saved = {}, reducedMotion = false, noAudio = false, blockedAudio
   w.setInterval = (callback, delay) => { const id = ++nextId; timers.set(id, { callback, at: now + delay, interval: delay }); return id; };
   w.clearInterval = w.clearTimeout;
 
-  if (!noAudio) w.AudioContext = class {
-    constructor() { contexts++; this.state = initialAudioState; this.destination = {}; }
-    get currentTime() { return now / 1000; }
-    resume() { resumes++; if (blockedAudio) return Promise.reject(new Error('Audio blocked')); this.state = 'running'; return Promise.resolve(); }
-    createGain() {
-      const events = [];
-      return { gain: {
-        events,
-        setValueAtTime(value, at) { events.push({ value, at }); },
-        linearRampToValueAtTime(value, at) { events.push({ value, at }); },
-        exponentialRampToValueAtTime(value, at) { events.push({ value, at }); },
-      }, connect() {}, disconnect() {} };
+  class MockPlayer {
+    constructor(frame, { events }) {
+      this.frame = frame; this.events = events; this.playing = false; this.position = 0;
+      players.push(this);
+      w.setTimeout(() => events.onReady({ target: this }), readyDelay);
     }
-    createOscillator() {
-      const tone = { createdAt: now, start: null, stop: null, frequency: null, sweep: null, type: null, envelope: [] };
-      return {
-        set type(type) { tone.type = type; },
-        frequency: {
-          setValueAtTime(frequency) { tone.frequency = frequency; },
-          exponentialRampToValueAtTime(frequency, at) { tone.sweep = { frequency, at }; },
-        },
-        connect(gain) { tone.envelope = gain.gain.events; }, disconnect() {},
-        start(at) { tone.start = at; tones.push(tone); },
-        stop(at = now / 1000) { tone.stop = at; },
-      };
+    seekTo(position) { this.position = position; }
+    unMute() { this.muted = false; }
+    playVideo() {
+      plays.push({ at: now, position: this.position, muted: this.muted });
+      if (blocked) { this.events.onAutoplayBlocked({ target: this }); return; }
+      w.setTimeout(() => this.emit(1), playbackDelay);
     }
-  };
+    pauseVideo() { this.playing = false; this.events.onStateChange({ target: this, data: 2 }); }
+    destroy() { this.destroyed = true; this.playing = false; this.frame.remove(); }
+    emit(data) { this.playing = data === 1; this.events.onStateChange({ target: this, data }); }
+    fail(code = 101) { this.events.onError({ target: this, data: code }); }
+  }
+  if (!noAPI) w.YT = { Player: MockPlayer };
   for (const [key, value] of Object.entries(saved)) w.localStorage.setItem(key, value);
   for (const source of sources) w.eval(source);
   const $ = selector => w.document.querySelector(selector);
   return {
-    $, w, tones, errors,
-    get contexts() { return contexts; }, get resumes() { return resumes; },
-    get reminders() { return new Set(tones.map(tone => tone.createdAt)).size; },
+    $, w, plays, players, errors,
+    get player() { return players.at(-1); },
+    get reminders() { return plays.length; },
+    allowPlayback() { blocked = false; },
+    loadAPI() { w.YT = { Player: MockPlayer }; w.onYouTubeIframeAPIReady(); },
     click(selector) { const node = $(selector); assert.ok(node, selector); node.click(); },
     press(key) { w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key, bubbles: true })); },
     advance(ms) {
@@ -88,10 +82,10 @@ async function test(name, action, options) {
 
 await test('the music starts at ten seconds, once per idle stretch', game => {
   game.advance(10000);
-  assert.equal(game.contexts, 0); assert.equal(game.tones.length, 0);
+  assert.equal(game.players.length, 0); assert.equal(game.plays.length, 0);
   game.click('.cell.selected');
-  assert.equal(game.contexts, 1); assert.equal(game.resumes, 1);
-  game.advance(9999); assert.equal(game.tones.length, 0);
+  assert.equal(game.players.length, 1);
+  game.advance(9999); assert.equal(game.plays.length, 0);
   game.advance(1); assert.equal(game.reminders, 1);
   game.advance(20000); assert.equal(game.reminders, 1);
   game.press('4'); game.advance(9999); assert.equal(game.reminders, 1);
@@ -101,22 +95,23 @@ await test('the music starts at ten seconds, once per idle stretch', game => {
   game.advance(1); assert.equal(game.reminders, 3);
 });
 
-await test('the ten-second music has pitched melody, sustained chords, bass, and percussion', game => {
+await test('the exact linked video plays for ten seconds and uses a visible, controllable embed', game => {
   game.press('4'); game.advance(10000);
   assert.equal(game.reminders, 1);
-  const drums = game.tones.filter(tone => tone.type === 'sine' && tone.frequency < 120 && tone.sweep.frequency < tone.frequency);
-  const melody = game.tones.filter(tone => tone.type === 'triangle' && tone.frequency > 200 && tone.frequency === tone.sweep.frequency);
-  const chords = game.tones.filter(tone => tone.type === 'sine' && tone.frequency === tone.sweep.frequency && tone.stop - tone.start > 2);
-  const bass = game.tones.filter(tone => tone.type === 'triangle' && tone.frequency < 120 && tone.frequency === tone.sweep.frequency);
-  assert.ok(drums.length >= 8 && melody.length >= 16 && chords.length >= 6 && bass.length >= 8);
-  assert.ok(new Set(melody.map(tone => Math.round(tone.frequency))).size >= 8);
-  assert.ok(melody.at(-1).frequency > melody[0].frequency);
-  const duration = Math.max(...game.tones.map(tone => tone.stop)) - Math.min(...game.tones.map(tone => tone.start));
-  assert.ok(duration >= 9.9 && duration <= 10.1);
-  assert.ok(game.tones.every(tone => tone.envelope[0].value === 0 && tone.envelope.at(-1).value <= 0.001));
-  assert.ok(game.tones.every(tone => Math.max(...tone.envelope.map(event => event.value)) <= 0.15));
-  // A fresh entry cancels every layer, including notes scheduled later in the cue.
-  game.press('5'); assert.ok(game.tones.every(tone => tone.stop <= tone.start));
+  const frame = game.$('#idle-music-player'), url = new URL(frame.src);
+  assert.equal(url.origin + url.pathname, 'https://www.youtube.com/embed/SP0RCMtfm4o');
+  assert.equal(url.searchParams.get('origin'), 'https://example.github.io');
+  assert.equal(url.searchParams.get('autoplay'), '0');
+  assert.equal(url.searchParams.get('enablejsapi'), '1');
+  assert.match(frame.allow, /autoplay/); assert.equal(frame.referrerPolicy, 'strict-origin-when-cross-origin');
+  assert.ok(Number(frame.width) >= 200 && Number(frame.height) >= 200); assert.ok(!frame.hidden);
+  assert.equal(game.$('.music-source').href, 'https://www.youtube.com/watch?v=SP0RCMtfm4o');
+  assert.deepEqual(game.plays[0], { at: 10000, position: 0, muted: false });
+  game.advance(9999); assert.ok(game.player.playing);
+  game.advance(1); assert.ok(!game.player.playing);
+  game.advance(10000); assert.equal(game.reminders, 1);
+  game.press('5'); game.advance(10000); assert.ok(game.player.playing);
+  game.press('6'); assert.ok(!game.player.playing);
 });
 
 await test('notes and keypad digits reset inactivity; selection and erase do not', game => {
@@ -131,8 +126,8 @@ await test('notes and keypad digits reset inactivity; selection and erase do not
 
 await test('pausing, dialogs, and background tabs cancel music and restart the ten-second window', game => {
   game.press('4'); game.advance(9000); game.click('#pause-button');
-  game.advance(20000); assert.equal(game.tones.length, 0);
-  game.click('#resume-button'); game.advance(9999); assert.equal(game.tones.length, 0);
+  game.advance(20000); assert.equal(game.plays.length, 0);
+  game.click('#resume-button'); game.advance(9999); assert.equal(game.plays.length, 0);
   game.advance(1); assert.equal(game.reminders, 1);
   game.press('5'); game.advance(9000); game.click('#help-button');
   game.advance(20000); assert.equal(game.reminders, 1);
@@ -143,7 +138,7 @@ await test('pausing, dialogs, and background tabs cancel music and restart the t
   game.hide(false); game.advance(9999); assert.equal(game.reminders, 2);
   game.advance(1); assert.equal(game.reminders, 3);
   game.click('#pause-button');
-  assert.ok(game.tones.filter(tone => tone.createdAt === game.tones.at(-1).createdAt).every(tone => tone.stop <= tone.start));
+  assert.ok(!game.player.playing);
 });
 
 let mutedSave;
@@ -151,7 +146,7 @@ await test('mute immediately stops sound and persists separately from puzzle pro
   game.press('3'); game.advance(10000); assert.equal(game.reminders, 1);
   game.click('#sound-button');
   assert.equal(game.$('#sound-button').getAttribute('aria-pressed'), 'false');
-  assert.ok(game.tones.every(tone => tone.stop <= tone.start));
+  assert.ok(!game.player.playing);
   game.press('4'); game.advance(10000); assert.equal(game.reminders, 1);
   mutedSave = game.saved();
   assert.equal(JSON.parse(mutedSave[settingsKey]).soundEnabled, false);
@@ -160,14 +155,14 @@ await test('mute immediately stops sound and persists separately from puzzle pro
 });
 await test('a restored muted game stays silent', game => {
   assert.equal(game.$('#sound-button').getAttribute('aria-pressed'), 'false');
-  game.press('2'); game.advance(10000); assert.equal(game.tones.length, 0);
+  game.press('2'); game.advance(10000); assert.equal(game.plays.length, 0); assert.equal(game.players.length, 0);
 }, { saved: mutedSave });
 
 await test('restart and new puzzle remove any pending reminder', game => {
   game.press('2'); game.advance(9000); game.click('#restart-button'); game.click('#confirm-yes');
-  game.advance(10000); assert.equal(game.tones.length, 0);
+  game.advance(10000); assert.equal(game.plays.length, 0);
   game.press('4'); game.advance(9000); game.click('#new-game-button'); game.click('#confirm-yes');
-  game.advance(10000); assert.equal(game.tones.length, 0);
+  game.advance(10000); assert.equal(game.plays.length, 0);
   game.click('.cell.selected'); game.advance(10000); assert.equal(game.reminders, 1);
 });
 
@@ -190,32 +185,125 @@ await test('solving launches confetti in the results dialog, cleans up, and stop
   completedSave = game.saved();
   game.advance(4599); assert.ok(game.$('.confetti-layer'));
   game.advance(1); assert.equal(game.$('.confetti-layer'), null);
-  game.advance(15000); assert.equal(game.tones.length, 0);
+  game.advance(15000); assert.equal(game.plays.length, 0);
 });
 await test('reopening a completed save does not replay confetti or sound', game => {
   assert.ok(game.$('#win-dialog').open); assert.equal(game.$('.confetti-layer'), null);
-  game.advance(10000); assert.equal(game.tones.length, 0);
+  game.advance(10000); assert.equal(game.plays.length, 0);
 }, { saved: completedSave });
 await test('closing results or starting another puzzle removes confetti immediately', game => {
   finish(game); assert.ok(game.$('.confetti-layer'));
   game.click('#win-dialog [data-close]'); assert.equal(game.$('.confetti-layer'), null);
   game.click('#restart-button'); game.click('#confirm-yes'); finish(game);
   game.click('#win-next'); assert.equal(game.$('.confetti-layer'), null);
-  game.advance(10000); assert.equal(game.tones.length, 0);
+  game.advance(10000); assert.equal(game.plays.length, 0);
 });
 await test('reduced-motion preference keeps the win screen without animation', game => {
   finish(game); assert.equal(game.$('.confetti-layer'), null);
 }, { reducedMotion: true });
-await test('unavailable browser audio does not break play or celebration', game => {
-  assert.ok(game.$('#sound-button').disabled);
-  game.press('4'); game.advance(10000); finish(game);
+await test('an unavailable YouTube API does not break play or celebration', game => {
+  game.press('4'); game.advance(20000);
+  assert.equal(game.plays.length, 0); assert.match(game.$('#music-status').textContent, /could not load/);
+  assert.equal(game.$('#music-play-button').hidden, false); finish(game);
   assert.ok(game.$('.confetti-layer'));
-}, { noAudio: true });
-await test('blocked audio resumes fail quietly without breaking the puzzle', game => {
-  game.press('4'); game.advance(10000); assert.equal(game.tones.length, 0);
+}, { noAPI: true });
+await test('blocked autoplay offers a working play button without interrupting the puzzle', game => {
+  game.press('4'); game.advance(10000); assert.ok(!game.player.playing);
+  assert.match(game.$('#music-status').textContent, /needs a tap/);
+  assert.equal(game.$('#music-play-button').hidden, false);
   assert.equal(game.$('.cell.selected .value').textContent, '4');
+  game.allowPlayback(); game.click('#music-play-button'); game.advance(0);
+  assert.ok(game.player.playing); assert.equal(game.$('#music-play-button').hidden, true);
+  game.advance(10000); assert.ok(!game.player.playing);
 }, { blockedAudio: true });
-await test('an interrupted audio context resumes on the next player interaction', game => {
+
+await test('the API loads only on interaction and a slow player honors the latest digit', game => {
+  assert.equal(game.$('script[src="https://www.youtube.com/iframe_api"]'), null);
+  game.press('4'); assert.ok(game.$('script[src="https://www.youtube.com/iframe_api"]'));
+  game.advance(10000); assert.equal(game.reminders, 0);
+  game.press('5'); game.loadAPI(); game.advance(0); assert.equal(game.reminders, 0);
+  game.advance(9999); assert.equal(game.reminders, 0);
+  game.advance(1); assert.equal(game.reminders, 1);
+}, { noAPI: true });
+
+await test('a late player starts only if the same idle stretch is still active', game => {
+  game.press('4'); game.advance(10000); assert.equal(game.reminders, 0);
+  game.advance(2000); assert.equal(game.reminders, 1); assert.ok(game.player.playing);
+}, { readyDelay: 12000 });
+
+await test('duplicate API callbacks create only one player', game => {
+  game.press('4'); game.loadAPI(); game.loadAPI(); game.advance(0);
+  assert.equal(game.players.length, 1);
+  game.advance(10000); assert.equal(game.reminders, 1);
+}, { noAPI: true });
+
+await test('a script loading failure allows retry without breaking the puzzle', game => {
+  game.press('4');
+  game.$('script[src="https://www.youtube.com/iframe_api"]').dispatchEvent(new game.w.Event('error'));
+  assert.match(game.$('#music-status').textContent, /could not load/);
+  game.click('#music-play-button'); game.loadAPI(); game.advance(10000);
+  assert.ok(game.player.playing); assert.equal(game.$('.cell.selected .value').textContent, '4');
+}, { noAPI: true });
+
+await test('entering a digit dismisses the autoplay prompt and starts a new countdown', game => {
   game.press('4'); game.advance(10000);
-  assert.equal(game.resumes, 1); assert.equal(game.reminders, 1);
-}, { initialAudioState: 'interrupted' });
+  assert.equal(game.$('#music-play-button').hidden, false);
+  game.press('5'); assert.equal(game.$('#music-play-button').hidden, true);
+  game.allowPlayback(); game.advance(9999); assert.ok(!game.player.playing);
+  game.advance(1); assert.ok(game.player.playing);
+}, { blockedAudio: true });
+
+await test('muting before the player is ready prevents delayed playback', game => {
+  game.press('4'); game.advance(10000); game.click('#sound-button');
+  game.advance(3000); assert.equal(game.reminders, 0);
+}, { readyDelay: 12000 });
+
+await test('ten seconds of playback starts when the video actually plays, after buffering', game => {
+  game.press('4'); game.advance(10000); assert.ok(!game.player.playing);
+  game.advance(3000); assert.ok(game.player.playing);
+  game.advance(9999); assert.ok(game.player.playing);
+  game.advance(1); assert.ok(!game.player.playing);
+}, { playbackDelay: 3000 });
+
+await test('a digit cancels playback even if a delayed playing event arrives afterward', game => {
+  game.press('4'); game.advance(10000); game.press('5');
+  game.advance(3000); assert.ok(!game.player.playing);
+}, { playbackDelay: 3000 });
+
+await test('an embedding error offers retry and ignores events from the old player', game => {
+  game.press('4'); game.advance(10000); const oldPlayer = game.player;
+  oldPlayer.fail(101); assert.ok(oldPlayer.destroyed);
+  assert.match(game.$('#music-status').textContent, /could not load/);
+  game.click('#music-play-button'); game.advance(0);
+  assert.equal(game.players.length, 2); oldPlayer.fail(153);
+  assert.ok(!game.player.destroyed);
+  game.advance(10000); assert.ok(game.player.playing);
+  game.press('5'); assert.ok(!game.player.playing);
+});
+
+await test('manual play cannot sound while muted, paused, or before the idle deadline', game => {
+  game.press('4'); game.advance(0); game.player.emit(1); assert.ok(!game.player.playing);
+  game.advance(10000); assert.ok(game.player.playing);
+  game.click('#sound-button'); game.player.emit(1); assert.ok(!game.player.playing);
+  game.click('#sound-button'); game.click('#pause-button'); game.player.emit(1); assert.ok(!game.player.playing);
+});
+
+await test('the pagehide event cancels the soundtrack and all pending idle playback', game => {
+  game.press('4'); game.advance(10000); assert.ok(game.player.playing);
+  game.w.dispatchEvent(new game.w.Event('pagehide'));
+  assert.ok(!game.player.playing); game.advance(20000); assert.equal(game.reminders, 1);
+});
+
+await test('completion stops active music and rejects subsequent playback', game => {
+  game.press('4'); game.advance(10000); assert.ok(game.player.playing);
+  finish(game); assert.ok(!game.player.playing);
+  game.player.emit(1); assert.ok(!game.player.playing);
+  game.advance(20000); assert.equal(game.reminders, 1);
+});
+
+await test('opening a local HTML file explains hosting while the puzzle still works', game => {
+  assert.ok(game.$('#sound-button').disabled);
+  assert.match(game.$('#music-status').textContent, /hosted game or local preview/);
+  game.press('4'); game.advance(10000); assert.equal(game.players.length, 0);
+  assert.equal(game.$('.cell.selected .value').textContent, '4');
+}, { url: 'file:///C:/Kakuro/public/index.html' });

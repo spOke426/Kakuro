@@ -1,6 +1,6 @@
 # Kakuro for GitHub Pages
 
-A complete browser-based Kakuro game with **Easy, Medium, Hard, and Insane** difficulties. The original PHP functionality has been converted to JavaScript, so the game runs on GitHub Pages without PHP, a database, an API, or a build service.
+A complete browser-based Kakuro game with **Easy, Medium, Hard, and Insane** difficulties. The original PHP functionality has been converted to JavaScript, so the game runs on GitHub Pages without PHP, a database, a server-side API, or a build service.
 
 ## Publish on GitHub Pages
 
@@ -18,7 +18,7 @@ Keep `.tools`, `.qa`, and `.runtime` out of the repository; `.gitignore` already
 
 ## Play locally
 
-Open **public/index.html** in a modern browser. All assets are local and no PHP server is needed. If your browser blocks saved progress for local files, use the optional preview server:
+Open **public/index.html** in a modern browser to play the puzzle. No PHP server is needed. To hear the YouTube soundtrack, or if your browser blocks saved progress for local files, use the preview server:
 
 ```powershell
 node scripts/serve.mjs
@@ -37,12 +37,13 @@ Then open **http://127.0.0.1:8080**. Stop the server with Ctrl+C. On Windows, `p
 - Underlined starter digits are fixed. Each puzzle has exactly one solution with its starter digits.
 - On-screen number pad, keyboard controls, pencil notes, undo, erase, pause, restart, answer checking, and a completion screen.
 - Solving a puzzle launches a short confetti celebration. It respects reduced-motion preferences and does not replay when reopening an already completed save.
-- After your first interaction with the board, intense suspense music starts after **10 seconds without entering a digit**. This original, ten-second piece combines minor-key chords, a rising arpeggio melody, driving bass, and percussion. It plays once per idle stretch; entering another digit (including a pencil note) or using a hint stops the music and resets the reminder. Pausing, opening a dialog, hiding the tab, or completing the puzzle also silences it. Returning to active play gives you a fresh ten-second window if no reminder has sounded yet.
-- The **speaker button beside the timer** turns idle reminder sounds on or off and remembers your choice. Audio uses the browser's built-in synthesizer, so no sound downloads or external services are needed. Browser sound permission and device volume still apply.
+- After your first interaction with the board, **[The Dark Night](https://www.youtube.com/watch?v=SP0RCMtfm4o)** starts after **10 seconds without entering a digit**, using the linked recording in a visible YouTube player. It plays for up to ten seconds, once per idle stretch; entering another digit (including a pencil note) or using a hint stops the music and resets the reminder. Pausing, opening a dialog, hiding the tab, or completing the puzzle also silences it. Returning to active play gives you a fresh ten-second window if no reminder has sounded yet.
+- The **speaker button beside the timer** turns idle music on or off and remembers your choice. The soundtrack loads from YouTube on your first interaction when sound is enabled. It requires internet access and GitHub Pages or the local HTTP preview; direct `file://` play supports the puzzle but disables music.
+- If the browser blocks automatic sound, the soundtrack card offers **Play music** after the idle deadline. A loading or embedding failure offers **Retry music** and a direct YouTube link. Retry starts a fresh ten-second idle window. Slow loads wait for the player to be ready, and buffering can delay audible playback; the ten-second clip limit begins when playback starts. YouTube's availability, advertising, and browser playback rules still apply.
 - **N** toggles notes, **Backspace/Delete** erases, **Ctrl/Cmd+Z** undoes, and arrow keys move between cells.
 - Three hints per puzzle. Refreshing the page or restarting the puzzle preserves the used-hint count.
 - Your active puzzle, entries, notes, timer, and used hints are saved in this browser's local storage. Saves are scoped to the site's path so separate GitHub project sites do not share progress. Adding Insane preserves existing Easy, Medium, and Hard saves. Clearing site data, changing browsers, or replacing existing puzzles starts fresh. Older PHP-session saves do not migrate.
-- The timer pauses while the puzzle is paused, the tab is hidden, or a dialog is open. After the page has loaded, playing and switching puzzles require no network requests.
+- The timer pauses while the puzzle is paused, the tab is hidden, or a dialog is open. Puzzle generation, checking, and saved progress run locally; the optional YouTube soundtrack uses network requests.
 
 Puzzle answers and hint limits now live in the browser, as required for a fully static game. They can be inspected or modified with browser developer tools; this is a casual single-player game, not a tamper-proof competition.
 
@@ -53,7 +54,7 @@ Puzzle answers and hint limits now live in the browser, as required for a fully 
 public/index.html            Static game page
 public/assets/engine.js       Puzzle creation, checking, hints, save validation
 public/assets/game.js         Controls, notes, timer, and local saves
-public/assets/feedback.js     Confetti and the optional idle reminder sound
+public/assets/feedback.js     Confetti, idle timing, and YouTube soundtrack controls
 public/assets/puzzles.js      Browser-ready puzzle bank
 public/assets/style.css       Responsive styles
 public/assets/favicon.svg     Game icon
@@ -87,9 +88,9 @@ node tests/interface.mjs
 node tests/effects.mjs
 ```
 
-These tests exercise the actual browser scripts with network access disabled in a simulated DOM. They cover all four levels, notes, undo, checking, hints and hint persistence, save/restore, pause, restarting, completion, damaged saves, and unavailable storage. They do not replace real-browser visual checks.
+These tests exercise the actual browser scripts in a simulated DOM without fetching external resources. They cover all four levels, notes, undo, checking, hints and hint persistence, save/restore, pause, restarting, completion, damaged saves, and unavailable storage. They do not replace real-browser visual checks.
 
-The effects test uses a simulated clock and Web Audio context to check the ten-second trigger, the music's ten-second duration and layers, digit/notes resets, mute persistence, pause/dialog/background behavior, completion, confetti cleanup, and reduced motion. It verifies sound scheduling, not physical speaker playback. Audio is unlocked by a user interaction as required by [browser autoplay rules](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay).
+The effects test uses a simulated clock and mock YouTube player to check the exact video ID, ten-second trigger and clip limit, digit/notes resets, mute persistence, pause/dialog/background behavior, completion, confetti cleanup, and reduced motion. It also covers blocked autoplay, buffering, slow loading, late playback events, embedding errors, retry, and direct-file play. It verifies integration behavior, not live YouTube availability or physical speaker playback. The player follows the [YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference), including its autoplay-blocked event and embedding-error handling; [browser autoplay rules](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay) may require a tap before sound can play.
 
 To regenerate the puzzle bank:
 

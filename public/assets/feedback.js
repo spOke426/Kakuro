@@ -1,91 +1,124 @@
 (() => {
   'use strict';
 
-  function create({ soundButton, celebrationHost, settingsKey, isActive }) {
-    const Audio = window.AudioContext || window.webkitAudioContext;
+  function create({ soundButton, celebrationHost, musicHost, musicStatus, musicButton, settingsKey, isActive }) {
+    const videoId = 'SP0RCMtfm4o';
+    const canEmbed = /^https?:$/.test(location.protocol);
     let enabled = true, engaged = false, reminded = false;
-    let idleTimer = null, celebrationTimer = null, context = null;
-    const voices = new Set();
+    let idleTimer = null, celebrationTimer = null, clipTimer = null, loadTimer = null, startTimer = null;
+    let player = null, apiScript = null, generation = 0;
+    let ready = false, loading = false, failed = false, wanted = false, clipStarted = false;
     try { enabled = JSON.parse(localStorage.getItem(settingsKey) || '{}').soundEnabled !== false; }
     catch { /* Sound controls still work when storage is unavailable. */ }
 
     function updateButton() {
-      soundButton.disabled = !Audio;
-      soundButton.setAttribute('aria-pressed', String(Boolean(Audio && enabled)));
-      const label = !Audio ? 'Idle music unavailable in this browser' : enabled ? 'Mute idle music' : 'Enable idle music';
+      soundButton.disabled = !canEmbed;
+      soundButton.setAttribute('aria-pressed', String(Boolean(canEmbed && enabled)));
+      const label = !canEmbed ? 'Open the hosted game to enable music' : enabled ? 'Mute idle music' : 'Enable idle music';
       soundButton.setAttribute('aria-label', label);
       soundButton.title = label;
     }
 
-    function unlockAudio() {
-      if (!enabled || !Audio) return;
-      try {
-        if (!context || context.state === 'closed') context = new Audio();
-        // Called from a click or key press to comply with browser autoplay rules.
-        if (context.state !== 'running') context.resume().catch(() => {});
-      } catch { /* Audio restrictions must never interrupt the puzzle. */ }
+    function showStatus() {
+      musicButton.hidden = !failed || !enabled;
+      musicButton.textContent = 'Retry music';
+      musicStatus.textContent = !canEmbed ? 'Music needs the hosted game or local preview server.'
+        : !enabled ? 'Idle music is muted. Use the speaker button to enable it.'
+        : failed ? 'YouTube could not load this track. Retry or open the link below.'
+        : loading ? 'Loading your soundtrack from YouTube…'
+        : 'Starts after 10 seconds without a digit. Plays for up to 10 seconds.';
     }
 
     function stopSound() {
-      for (const voice of voices) {
-        try { voice.oscillator.stop(); voice.oscillator.disconnect(); voice.gain.disconnect(); }
-        catch { /* A voice may already have ended. */ }
-      }
-      voices.clear();
+      wanted = false; clipStarted = false;
+      clearTimeout(clipTimer); clearTimeout(startTimer);
+      clipTimer = null; startTimer = null;
+      try { if (ready) player.pauseVideo(); }
+      catch { /* A disconnected player must not interrupt the puzzle. */ }
+      showStatus();
     }
 
-    function suspenseMusic() {
-      if (!context || context.state !== 'running') return;
-      try {
-        const origin = context.currentTime;
-        function tone(offset, duration, type, from, to, volume, attack = 0.012) {
-          const at = origin + offset;
-          const oscillator = context.createOscillator(), gain = context.createGain();
-          const voice = { oscillator, gain };
-          oscillator.type = type;
-          oscillator.frequency.setValueAtTime(from, at);
-          oscillator.frequency.exponentialRampToValueAtTime(to, at + duration);
-          gain.gain.setValueAtTime(0, at);
-          gain.gain.linearRampToValueAtTime(volume, at + attack);
-          gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
-          oscillator.connect(gain); gain.connect(context.destination);
-          oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); voices.delete(voice); };
-          voices.add(voice);
-          oscillator.start(at); oscillator.stop(at + duration + 0.02);
-        }
+    function failMusic() {
+      generation++; failed = true; loading = false;
+      clearTimeout(loadTimer); loadTimer = null;
+      stopSound(); ready = false;
+      try { player?.destroy(); } catch { /* The iframe may already be gone. */ }
+      player = null; apiScript?.remove(); apiScript = null;
+      musicHost.textContent = 'Soundtrack unavailable';
+    }
 
-        // Original four-bar suspense score at 100 BPM: D minor, B-flat, G minor, A7.
-        // Arpeggios, bass, and percussion share a musical pulse; the last bar builds tension.
-        const hz = midi => 440 * 2 ** ((midi - 69) / 12);
-        const step = 0.3, barLength = 2.4;
-        const bars = [
-          { bass: 38, chord: [50, 53, 57], melody: [62, 65, 69, 65, 62, 65, 69, 72] },
-          { bass: 34, chord: [46, 50, 53], melody: [58, 62, 65, 62, 58, 62, 65, 69] },
-          { bass: 31, chord: [43, 46, 50], melody: [55, 58, 62, 58, 62, 65, 67, 70] },
-          { bass: 33, chord: [45, 49, 52, 55], melody: [57, 61, 64, 67, 69, 73, 76, 79] },
-        ];
-        bars.forEach((bar, index) => {
-          const start = index * barLength;
-          for (const note of bar.chord) {
-            const frequency = hz(note);
-            tone(start, index === 3 ? 2.7 : 2.3, 'sine', frequency, frequency, 0.012, 0.28);
-          }
-          bar.melody.forEach((note, beat) => {
-            const at = start + beat * step, frequency = hz(note);
-            const lastNote = index === 3 && beat === 7;
-            tone(at, lastNote ? 0.68 : 0.25, 'triangle', frequency, frequency, 0.033 + index * 0.004);
-            // Short high percussion adds urgency without overpowering the melody.
-            tone(at, 0.055, 'triangle', 5200, 3100, beat % 2 ? 0.008 : 0.005, 0.004);
-            if (beat % 2 === 0) {
-              tone(at, 0.22, 'sine', 108, 40, beat % 4 === 0 ? 0.11 : 0.08);
-              const bass = hz(bar.bass);
-              tone(at, 0.5, 'triangle', bass, bass, 0.045);
-              if (index >= 2) tone(at + 0.14, 0.13, 'sine', 78, 36, 0.05);
-            }
-          });
-        });
-        // The final melody note fades at ten seconds; nothing loops or downloads.
-      } catch { stopSound(); }
+    function blockedPlayback() {
+      clearTimeout(startTimer); startTimer = null;
+      if (!wanted || !enabled || !isActive()) return;
+      musicStatus.textContent = 'Your browser needs a tap to play sound. Press Play music or the video’s play button.';
+      musicButton.textContent = 'Play music'; musicButton.hidden = false;
+    }
+
+    function playMusic() {
+      if (!wanted || !ready || !enabled || !isActive()) return;
+      try {
+        musicStatus.textContent = 'Starting The Dark Night…'; musicButton.hidden = true;
+        clearTimeout(startTimer);
+        startTimer = setTimeout(blockedPlayback, 15000);
+        player.seekTo(0, true); player.unMute(); player.playVideo();
+      } catch { failMusic(); }
+    }
+
+    function loadMusic() {
+      if (!canEmbed || !enabled || ready || loading || failed) return;
+      loading = true; showStatus();
+      const request = ++generation;
+      let mounted = false;
+      loadTimer = setTimeout(() => { if (request === generation) failMusic(); }, 20000);
+      function mountPlayer() {
+        if (request !== generation || mounted) return;
+        mounted = true;
+        try {
+          const frame = document.createElement('iframe');
+          frame.id = 'idle-music-player'; frame.title = 'The Dark Night — YouTube music player';
+          frame.width = '320'; frame.height = '220';
+          frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+          frame.allowFullscreen = true;
+          // Preserve an origin referrer for YouTube's embedded-player identification.
+          frame.referrerPolicy = 'strict-origin-when-cross-origin';
+          const url = new URL(`https://www.youtube.com/embed/${videoId}`);
+          url.search = new URLSearchParams({ enablejsapi: '1', origin: location.origin, autoplay: '0', playsinline: '1', rel: '0' });
+          frame.src = url.href;
+          musicHost.replaceChildren(frame);
+          player = new window.YT.Player(frame, { events: {
+            onReady(event) {
+              if (request !== generation) return;
+              player = event.target; ready = true; loading = false;
+              clearTimeout(loadTimer); loadTimer = null;
+              showStatus();
+              if (wanted) playMusic();
+            },
+            onStateChange(event) {
+              if (request !== generation) return;
+              if (event.data === 1) {
+                // Late playback after a digit, mute, pause, or completion must stay silent.
+                if (!wanted || !enabled || !isActive()) { stopSound(); return; }
+                clearTimeout(startTimer); startTimer = null;
+                musicButton.hidden = true; musicStatus.textContent = 'Playing The Dark Night. Enter a digit to stop.';
+                if (!clipStarted) {
+                  clipStarted = true;
+                  clipTimer = setTimeout(stopSound, 10000);
+                }
+              } else if (event.data === 0 || (event.data === 2 && clipStarted)) {
+                stopSound();
+              }
+            },
+            onAutoplayBlocked() { if (request === generation) blockedPlayback(); },
+            onError() { if (request === generation) failMusic(); },
+          } });
+        } catch { failMusic(); }
+      }
+      if (window.YT?.Player) { mountPlayer(); return; }
+      window.onYouTubeIframeAPIReady = mountPlayer;
+      apiScript = document.createElement('script');
+      apiScript.src = 'https://www.youtube.com/iframe_api'; apiScript.async = true;
+      apiScript.onerror = () => { if (request === generation) failMusic(); };
+      document.head.appendChild(apiScript);
     }
 
     function cancelIdle() {
@@ -94,7 +127,7 @@
     }
 
     function sync() {
-      if (!Audio || !enabled || !engaged || !isActive()) {
+      if (!canEmbed || !enabled || !engaged || !isActive()) {
         cancelIdle(); stopSound(); return;
       }
       if (reminded || idleTimer !== null) return;
@@ -102,13 +135,15 @@
         idleTimer = null;
         if (!enabled || !engaged || !isActive()) return;
         reminded = true;
-        suspenseMusic();
+        if (failed) return;
+        wanted = true;
+        playMusic();
       }, 10000);
     }
 
     function interact() {
       engaged = true;
-      unlockAudio(); sync();
+      loadMusic(); sync();
     }
 
     function digitEntered() {
@@ -157,8 +192,12 @@
       updateButton();
       if (enabled) interact();
     });
+    musicButton.addEventListener('click', () => {
+      if (failed) { failed = false; reminded = false; cancelIdle(); loadMusic(); sync(); }
+      else playMusic();
+    });
     celebrationHost.addEventListener('close', clearCelebration);
-    updateButton();
+    updateButton(); showStatus();
     return Object.freeze({ interact, digitEntered, sync, celebrate, clearCelebration, reset });
   }
 
