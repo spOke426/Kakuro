@@ -33,6 +33,7 @@
   const message = (text, type = '') => { $('status').textContent = text; $('status').className = `status-message ${type}`; };
   const feedback = globalThis.KakuroFeedback.create({
     soundButton: $('sound-button'), celebrationHost: $('win-dialog'),
+    musicHost: $('music-player-host'), musicStatus: $('music-status'), musicButton: $('music-play-button'),
     settingsKey: `kakuro:settings:${new URL('.', location.href).pathname}`,
     isActive: () => started && !paused && !complete && !document.hidden && !hasDialog(),
   });

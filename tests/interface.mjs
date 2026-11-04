@@ -173,5 +173,5 @@ try {
   click('input[value="medium"]');click('#new-game-button');click('#confirm-yes');
   assert.equal($('#level-badge').textContent,'MEDIUM');
   await settle();
-  console.log('PASS: all game controls, four difficulties including an Insane solve, persistent hints, saved notes/timer, prior-version saves, damaged saves, path isolation, and local-file play; zero network requests.');
+  console.log('PASS: all game controls, four difficulties including an Insane solve, persistent hints, saved notes/timer, prior-version saves, damaged saves, path isolation, and local-file play; puzzle operations use no fetch/XHR. External media is not fetched in this DOM test.');
 } finally {dom?.window.close();}
